@@ -1,5 +1,7 @@
 """Modbus TCP 采集上报 - smart-relay-control-system
 
+作者：第七组（电信专业）
+
 功能：
   通过 Modbus TCP 从从站（config.json 的 modbus.host:port，默认 192.168.20.59:5502）
   采集指定寄存器（默认 0x0009；设备寄存器范围 0x0000-0x0009），并经 MQTT 上报到服务器。

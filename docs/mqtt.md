@@ -1,6 +1,8 @@
 # MQTT 连接配置与使用规范
 
 > 本文档记录 smart-relay-control-system 项目使用 MQTT 的 Broker 连接信息、主题设计与各模块职责。
+>
+> **制作者：第七组（电信专业）**
 
 ## 1. Broker 连接配置
 

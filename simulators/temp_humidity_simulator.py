@@ -1,5 +1,7 @@
 """温湿度传感器模拟器 - smart-relay-control-system
 
+作者：第七组（电信专业）
+
 功能：
   用 JSON 文件（sensor_state.json）存储温湿度当前值。
   当文件值发生变化（手动编辑该文件）时，脚本检测到变化，
