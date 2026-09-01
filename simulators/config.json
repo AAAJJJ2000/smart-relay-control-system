@@ -1,0 +1,25 @@
+{
+  "mqtt": {
+    "host": "172.16.4.211",
+    "port": 9783,
+    "username": "test",
+    "password": "123456",
+    "qos": 1
+  },
+  "sensor": {
+    "device_id": "sensor01",
+    "state_file": "sensor_state.json",
+    "poll_interval_sec": 2,
+    "topic": "smart-relay/sensor01/data"
+  },
+  "modbus": {
+    "host": "192.168.20.59",
+    "port": 5502,
+    "unit_id": 1,
+    "device_id": "modbus01",
+    "register_start": "0x0009",
+    "register_count": 1,
+    "poll_interval_sec": 5,
+    "read_topic": "smart-relay/modbus01/data"
+  }
+}
