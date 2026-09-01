@@ -30,7 +30,8 @@ python -m venv .venv
 ## 功能 1：温湿度传感器模拟器
 
 **原理**：用 JSON 文件 `sensor_state.json` 存温湿度；**手动编辑该文件**改变数值，
-脚本每 `poll_interval_sec` 秒检测一次，值发生变化即通过 MQTT 上报。
+脚本每 `poll_interval_sec` 秒检测一次，值发生变化即通过 MQTT 上报；
+同时支持按 `sensor.report_period_sec` **周期性自动上报**（0=关闭，仅变化时上报）。
 
 **运行**：
 ```bash
@@ -38,6 +39,7 @@ python -m venv .venv
 ```
 
 **改值触发上报**：编辑 `sensor_state.json` 的 `temperature` / `humidity`，保存后自动上报。
+**周期自动上报**：无论是否改值，每 `report_period_sec` 秒自动上报一次当前值。
 
 **上报主题**：`smart-relay/sensor01/data`（见 config 的 `sensor.topic`）
 
@@ -51,6 +53,7 @@ python -m venv .venv
 ## 功能 2：Modbus TCP 采集上报
 
 **原理**：从从站 `192.168.20.59:5502` 采集寄存器（默认 `0x0009`），经 MQTT 上报。
+**周期上报**：每 `modbus.poll_interval_sec`（默认 5s）自动采集并上报一次。
 **读写范围**：设备寄存器 `0x0000–0x0009`；每个小组在 `config.json` 里改成自己那段即可避免冲突。
 
 **运行**：
@@ -87,9 +90,9 @@ python -m venv .venv
 | 段 | 字段 | 说明 |
 |----|------|------|
 | `mqtt` | `host`/`port`/`username`/`password`/`qos` | Broker 连接与发布 QoS |
-| `sensor` | `device_id`/`state_file`/`poll_interval_sec`/`topic` | 模拟器设备标识、状态文件、检测间隔、上报主题 |
+| `sensor` | `device_id`/`state_file`/`poll_interval_sec`/`report_period_sec`/`topic` | 模拟器设备标识、状态文件、检测间隔、周期上报间隔、上报主题 |
 | `modbus` | `host`/`port`/`unit_id`/`device_id`/`register_start`/`register_count`/`poll_interval_sec`/`read_topic` | Modbus 从站、从站地址、寄存器段、采集间隔、上报主题 |
 
 ## 已验证（本次实测）
 - Modbus：`192.168.20.59:5502` 连通，`0x0009` 读取 → MQTT 上报成功。
-- 传感器：首次上报 + 修改 `sensor_state.json` 后自动二次上报，均到达 Broker。
+- 传感器：首次上报 + 修改 `sensor_state.json` 后自动上报，且按 `report_period_sec` 周期上报，均到达 Broker。

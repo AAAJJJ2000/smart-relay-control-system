@@ -79,10 +79,12 @@ smart-relay/modbus01/data          # Modbus 采集上报
 ### 1. 温湿度传感器模拟器
 - 用 `simulators/sensor_state.json` 存储温湿度值；
 - **手动改该文件**（值发生变化）即自动通过 MQTT 上报；
+- 支持按 `sensor.report_period_sec` **周期性自动上报**（如每 10s）；
 - 上报主题：`smart-relay/sensor01/data`。
 
 ### 2. Modbus TCP 采集上报
 - 从从站 `192.168.20.59:5502` 采集寄存器 `0x0000–0x0009`，上报 MQTT；
+- 每 `modbus.poll_interval_sec`（默认 5s）**周期性采集上报**；
 - 寄存器地址在 `config.json` 的 `register_start/register_count` 配置，**每个小组读写自己那段，避免冲突**；
 - 支持读取（持续/一次）与写入（`--write`）；
 - 上报主题：`smart-relay/modbus01/data`。
@@ -92,7 +94,7 @@ smart-relay/modbus01/data          # Modbus 采集上报
 ## 运行
 
 ```powershell
-# 温湿度传感器模拟器（持续监视文件，改值即上报）
+# 温湿度传感器模拟器（持续监视文件，改值即上报 + 按 report_period_sec 周期上报）
 .venv\Scripts\python.exe simulators\temp_humidity_simulator.py
 
 # Modbus 持续采集上报（每 5 秒一次）

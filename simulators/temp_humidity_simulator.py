@@ -4,8 +4,9 @@
 
 功能：
   用 JSON 文件（sensor_state.json）存储温湿度当前值。
-  当文件值发生变化（手动编辑该文件）时，脚本检测到变化，
-  立即通过 MQTT 上报到服务器（172.16.4.211:9783，test/123456）。
+  当文件值发生变化（手动编辑该文件）时，脚本检测到变化，立即通过 MQTT 上报；
+  同时支持按 config.json 的 sensor.report_period_sec 周期性上报（0=关闭，仅变化时上报）。
+  上报到服务器（172.16.4.211:9783，test/123456）。
 
 运行（项目根目录）：
   .venv\\Scripts\\python.exe simulators\\temp_humidity_simulator.py
@@ -54,8 +55,13 @@ def main():
     client.loop_start()
     print(f"[MQTT] 已连接 {mq['host']}:{mq['port']}")
 
-    last_signature = None  # 上次已上报值的签名
-    print(f"[模拟器] 监视 {state_file}，值变化即上报主题 {topic}")
+    last_signature = None      # 上次已上报值的签名
+    last_report_time = 0.0     # 上次上报时间
+    report_period = float(se.get("report_period_sec", 0))  # 周期上报间隔(秒)，0=关闭
+    mode_desc = "值变化即上报"
+    if report_period > 0:
+        mode_desc = f"值变化即上报 + 每 {report_period:g}s 周期上报"
+    print(f"[模拟器] 监视 {state_file}，{mode_desc} 至主题 {topic}")
 
     try:
         while True:
@@ -70,18 +76,23 @@ def main():
                     f"{temperature:.2f}|{humidity:.2f}".encode()
                 ).hexdigest()
 
-                if signature != last_signature:
+                now = time.time()
+                changed = signature != last_signature
+                periodic = report_period > 0 and (now - last_report_time) >= report_period
+
+                if changed or periodic:
                     payload = {
                         "deviceId": device_id,
                         "type": "temp_humidity",
                         "temperature": temperature,
                         "humidity": humidity,
-                        "ts": int(time.time()),
+                        "ts": int(now),
                     }
                     info = client.publish(topic, json.dumps(payload), qos=qos)
                     print(f"[上报] {topic} -> {json.dumps(payload)} "
                           f"(mid={info.mid})")
                     last_signature = signature
+                    last_report_time = now
             except FileNotFoundError:
                 print(f"[模拟器] 状态文件不存在，等待创建: {state_file}")
             except (json.JSONDecodeError, KeyError, ValueError) as e:

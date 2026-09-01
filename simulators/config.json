@@ -10,6 +10,7 @@
     "device_id": "sensor01",
     "state_file": "sensor_state.json",
     "poll_interval_sec": 2,
+    "report_period_sec": 10,
     "topic": "smart-relay/sensor01/data"
   },
   "modbus": {
