@@ -85,6 +85,48 @@ python -m venv .venv
 
 ---
 
+## 启动与关闭（自行管理进程）
+
+> `sensor` / `modbus` 都需要**保持进程运行**才会持续上报；进程一旦停止，上报即停止。
+
+### 前台运行 + Ctrl+C 关闭（最常用）
+打开 PowerShell/命令行窗口，进入项目根目录：
+```powershell
+cd E:\NEW\smart-relay-control-system
+.venv\Scripts\python.exe simulators\temp_humidity_simulator.py   # 启动 sensor（持续，每10s上报）
+```
+- **关闭**：在窗口按 **`Ctrl+C`**。
+
+Modbus 同理（另开一个窗口）：
+```powershell
+.venv\Scripts\python.exe simulators\modbus_gateway.py           # 持续采集，每5s
+.venv\Scripts\python.exe simulators\modbus_gateway.py --once    # 只采集一次
+```
+
+### 同时跑 sensor + modbus
+开**两个**终端窗口，各跑一个；各自用 `Ctrl+C` 关闭。
+
+### 后台运行 + 按 PID 关闭
+启动（后台，不占窗口）：
+```powershell
+Start-Process -FilePath "E:\NEW\smart-relay-control-system\.venv\Scripts\python.exe" `
+  -ArgumentList "simulators\temp_humidity_simulator.py" `
+  -WorkingDirectory "E:\NEW\smart-relay-control-system"
+```
+关闭：
+```powershell
+Get-Process python* | Select Id, StartTime
+Stop-Process -Id <PID> -Force
+```
+
+### 查看 / 清理残留进程
+```powershell
+Get-Process python* | Select Id, StartTime, Path
+Stop-Process -Id <PID> -Force
+```
+
+---
+
 ## config.json 字段说明
 
 | 段 | 字段 | 说明 |

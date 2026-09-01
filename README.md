@@ -110,6 +110,8 @@ smart-relay/modbus01/data          # Modbus 采集上报
 配合 **MQTTX**：订阅 `smart-relay/#`（或对应主题），连接 `172.16.4.211:9783` 即可实时查看上报消息。
 完整实操见 [`docs/mqtt-workflow.md`](docs/mqtt-workflow.md)。
 
+> 程序需**保持运行**才会持续上报；启动/关闭（前台 Ctr+C / 后台 PID）方法见 [`docs/simulators.md`](docs/simulators.md)。
+
 ---
 
 ## 文档
