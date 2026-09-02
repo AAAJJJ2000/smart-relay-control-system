@@ -199,6 +199,14 @@ smart-relay/modbus01/data          # Modbus 采集上报
 
 ---
 
+## 整体运行与测试流程
+
+**运行流程**：项目围绕「设备上报 + 平台接入 + 控制下发」的 MQTT 闭环展开。先在项目根建虚拟环境并装依赖（`python -m venv .venv` 后 `pip install -r requirements.txt`），复制 `simulators/config.example.json` 为 `simulators/config.json` 并填入实际 Broker 账号；随后按需启动各模拟器：温湿度模拟器（监视 `sensor_state.json` 变化即上报）、Modbus 采集器（周期读寄存器上报）、8 路继电器本地版（`relay_simulator.py`，订阅 `cmd` 指令并上报状态）、以及 8 路继电器 JetLinks 版（`relay_jetlinks.py`，连 EMQX 并按 JetLinks 官方协议上报）。所有消息经 Broker `172.16.4.211:9783` 转发；JetLinks 版由 JetLinks 的 `local_mqtt` 网络组件订阅 EMQX 收数，解析到 `relay_product_g7` 产品物模型，使 `relay01` 显示在线、8 路属性可见。全程可另用 MQTTX 连接同一 Broker，订阅 `smart-relay/#`（本地）或 JetLinks 相关主题实时观察消息流。
+
+**测试流程**：分四层递进。① 上报验证：用 MQTTX 订阅 `smart-relay/#`，确认温湿度 / Modbus / 8 路状态是否按预期上报（修改 `sensor_state.json` 或 Modbus 读值即触发）。② 控制验证：向 `smart-relay/relay01/cmd` 下发 `{"cmd":"set","channel":3,"status":"on"}` 等指令，看 8 路状态是否改变并回传；JetLinks 版则在平台「功能调试」点 `set_channel` 下发，确认模拟器收到 `function/invoke`、执行、回执 `function/invoke/reply`，且 `ch3_status` 更新。③ 在线/离线验证：启动模拟器→JetLinks 显示「在线」；停止或强制结束进程→因 MQTT 遗嘱 JetLinks 立即显示「离线」；再启动验证自动重连并恢复上报。④ 端到端按 M1 验收六条逐项核对（Broker 连接、定时上报平台可见、命令下发响应、断线自动重连、日志无致命错误、MQTTX 全程可见）。
+
+---
+
 ## 文档
 
 - [`docs/mqtt.md`](docs/mqtt.md)：MQTT 连接配置与主题设计
