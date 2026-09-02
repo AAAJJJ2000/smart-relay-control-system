@@ -25,7 +25,7 @@
       "name": "设置通道",
       "inputs": [
         { "id": "channel", "name": "通道", "valueType": { "type": "int" } },
-        { "id": "state",   "name": "状态", "valueType": { "type": "boolean" } }
+        { "id": "state",   "name": "状态", "valueType": { "type": "enum", "elements": [ { "value": "on", "text": "开" }, { "value": "off", "text": "关" } ] } }
       ],
       "outputs": [],
       "expands": {}

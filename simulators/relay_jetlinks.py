@@ -322,8 +322,11 @@ class RelaySimulatorJetlinks:
         channel = params.get("channel", params.get("ch", "all"))
         state = params.get("state")
         if isinstance(state, bool):
-            # 图格式：布尔 state -> on/off
             value = "on" if state else "off"
+        elif isinstance(state, str) and state.lower() in ("on", "off"):
+            value = state.lower()
+        elif isinstance(state, str) and state.lower() in ("true", "false"):
+            value = "on" if state.lower() == "true" else "off"
         else:
             value = params.get("status") or params.get("command") or params.get("ch_command") or params.get("action")
             value = str(value).lower() if value is not None else "toggle"
