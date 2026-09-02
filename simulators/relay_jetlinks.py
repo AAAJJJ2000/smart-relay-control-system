@@ -182,6 +182,18 @@ class RelaySimulatorJetlinks:
         self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
 
+        # MQTT 遗嘱(Last Will)：设备异常断开/掉线时，由 EMQX 代发 offline 事件，
+        # 使 JetLinks 能立刻将设备标记为离线（而不是等超时）。
+        will_payload = json.dumps({
+            "method": "thing_event_post",
+            "id": "evt_will_%d" % int(time.time() * 1000),
+            "params": {"eventId": "online_status", "online": False, "ts": int(time.time())},
+        }, ensure_ascii=False)
+        try:
+            self.client.will_set(self.topics.offline(), will_payload, qos=self.qos, retain=False)
+        except Exception as e:
+            self.log.warning("[遗嘱] 设置失败(忽略): %r", e)
+
         self._use_tls = bool(em.get("use_tls", True))
         self._ca_file = em.get("ca_file", "") or None
         self._tls_insecure = bool(em.get("tls_insecure", False))
