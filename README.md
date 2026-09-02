@@ -33,6 +33,7 @@ smart-relay-control-system/
 ├── tools/                    # 工具脚本
 │   └── set_sensor.py         # 查看/修改温湿度模拟数据
 ├── tests/                    # 测试（占位）
+├── requirements.txt          # Python 依赖清单
 ├── .gitignore
 └── README.md
 ```
@@ -46,7 +47,7 @@ smart-relay-control-system/
 
 ```bash
 python -m venv .venv
-.venv\Scripts\python.exe -m pip install paho-mqtt pymodbus
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 - 图形化 MQTT 客户端：**MQTTX**（观察消息流用，可选）。

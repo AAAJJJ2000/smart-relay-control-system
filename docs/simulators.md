@@ -23,7 +23,7 @@ simulators/
 ```bash
 # 项目根目录
 python -m venv .venv
-.venv\Scripts\python.exe -m pip install paho-mqtt pymodbus
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 > 本机已创建 `.venv` 并装好 `paho-mqtt 2.1.0`、`pymodbus 3.15.0`。
