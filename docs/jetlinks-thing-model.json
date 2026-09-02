@@ -1,0 +1,42 @@
+{
+  "properties": [
+    { "id": "ch1_status",  "name": "通道1状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
+    { "id": "ch2_status",  "name": "通道2状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
+    { "id": "ch3_status",  "name": "通道3状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
+    { "id": "ch4_status",  "name": "通道4状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
+    { "id": "ch5_status",  "name": "通道5状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
+    { "id": "ch6_status",  "name": "通道6状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
+    { "id": "ch7_status",  "name": "通道7状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
+    { "id": "ch8_status",  "name": "通道8状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
+    { "id": "online",      "name": "在线状态", "valueType": { "type": "boolean" } },
+    { "id": "ts",          "name": "时间戳",   "valueType": { "type": "long" } }
+  ],
+  "functions": [
+    {
+      "id": "set_channel",
+      "name": "设置单一通道",
+      "inputs": [
+        { "id": "channel", "name": "通道号", "valueType": { "type": "int" } },
+        { "id": "status",  "name": "目标状态", "valueType": { "type": "enum", "elements": [ { "value": "on", "text": "开" }, { "value": "off", "text": "关" } ] } }
+      ],
+      "outputs": [],
+      "expands": {}
+    },
+    {
+      "id": "set_all",
+      "name": "整机开关",
+      "inputs": [
+        { "id": "status", "name": "目标状态", "valueType": { "type": "enum", "elements": [ { "value": "on", "text": "开" }, { "value": "off", "text": "关" } ] } }
+      ],
+      "outputs": [],
+      "expands": {}
+    }
+  ],
+  "events": [
+    {
+      "id": "online_status",
+      "name": "在线状态变更",
+      "valueType": { "type": "object", "properties": [ { "id": "online", "name": "是否在线", "valueType": { "type": "boolean" } } ] }
+    }
+  ]
+}

@@ -9,10 +9,11 @@
 
 ```
 simulators/
-  config.json                # 共享配置文件（MQTT + 传感器 + Modbus）
+  config.json                # 共享配置文件（MQTT + 传感器 + Modbus + 继电器）
   sensor_state.json          # 温湿度当前值（手动编辑触发上报）
   temp_humidity_simulator.py # 功能1：温湿度传感器模拟器
   modbus_gateway.py          # 功能2：Modbus TCP 采集上报
+  relay_simulator.py         # 功能3：8 路继电器模拟器
 ```
 
 ## 环境
@@ -85,6 +86,61 @@ python -m venv .venv
 
 ---
 
+## 功能 3：8 路继电器模拟器
+
+**原理**：模拟一台带 8 路开关的继电器设备。它**订阅指令主题** `smart-relay/<device>/cmd` 接收控制命令，
+执行后**上报当前状态**到状态主题 `smart-relay/<device>/status`；同时按 `relay.report_period_sec` 周期上报。
+上线/下线时发布 `online` 状态到 `smart-relay/<device>/online`。断线自动退避重连，日志输出到控制台与 `relay_simulator.log`。
+
+**运行**（项目根目录）：
+```bash
+# 持续运行：监听指令 + 每 report_period_sec 秒周期上报
+.venv\Scripts\python.exe simulators\relay_simulator.py
+
+# 只上报一次当前状态后退出
+.venv\Scripts\python.exe simulators\relay_simulator.py --once
+
+# 不连网络，仅打印当前 8 路状态（本地自检）
+.venv\Scripts\python.exe simulators\relay_simulator.py --dry-run
+```
+
+**订阅/上报主题**（config 的 `relay.cmd_topic` / `relay.status_topic` / `relay.online_topic`）：
+```text
+smart-relay/relay01/cmd         # 下行控制指令（订阅，QoS 1）
+smart-relay/relay01/status      # 上行状态上报（发布，QoS 1）
+smart-relay/relay01/online      # 上线/下线状态（发布）
+```
+
+**控制指令（发布到 cmd 主题，JSON）**：
+
+| 指令示例 | 含义 |
+|----------|------|
+| `{"cmd":"on"}` / `{"cmd":"off"}` | 整机 8 路全部开 / 全部关 |
+| `{"cmd":"set","channel":3,"status":"on"}` | 将第 3 路置为 on |
+| `{"cmd":"toggle","channel":3}` | 翻转第 3 路（on↔off） |
+| `{"cmd":"query"}` | 仅查询，不改状态，触发一次上报 |
+
+> 兼容省略 `cmd` 的形式：`{"channel":3,"status":"on"}` 等价于 `set`。
+
+**状态上报（status 主题）payload 格式**：
+```json
+{
+  "deviceId": "relay01",
+  "type": "relay",
+  "online": true,
+  "reason": "command",
+  "channels": [
+    {"channel": 1, "status": "off", "voltage": 0, "current": 0},
+    {"channel": 2, "status": "on", "voltage": 219.6, "current": 1.8}
+  ],
+  "ts": 1724147200
+}
+```
+
+> `reason` 说明本次上报触发原因：`online`（上线）/ `command`（收到指令）/ `periodic`（周期上报）/ `once`（--once）。
+
+---
+
 ## 启动与关闭（自行管理进程）
 
 > `sensor` / `modbus` 都需要**保持进程运行**才会持续上报；进程一旦停止，上报即停止。
@@ -134,6 +190,7 @@ Stop-Process -Id <PID> -Force
 | `mqtt` | `host`/`port`/`username`/`password`/`qos` | Broker 连接与发布 QoS |
 | `sensor` | `device_id`/`state_file`/`poll_interval_sec`/`report_period_sec`/`topic` | 模拟器设备标识、状态文件、检测间隔、周期上报间隔、上报主题 |
 | `modbus` | `host`/`port`/`unit_id`/`device_id`/`register_start`/`register_count`/`poll_interval_sec`/`read_topic` | Modbus 从站、从站地址、寄存器段、采集间隔、上报主题 |
+| `relay` | `device_id`/`channel_count`/`initial_state`/`cmd_topic`/`status_topic`/`online_topic`/`report_period_sec`/`simulate_voltage`/`log_file` | 继电器设备标识、路数、初始状态、指令/状态/在线主题、周期上报间隔、是否模拟电压电流、日志文件 |
 
 ## 已验证（本次实测）
 - Modbus：`192.168.20.59:5502` 连通，`0x0009` 读取 → MQTT 上报成功。
