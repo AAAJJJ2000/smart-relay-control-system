@@ -287,6 +287,8 @@ class RelaySimulatorJetlinks:
             "changed": bool(changed),
             "channels": self.channels.snapshot(),
         })
+        # 执行后立即上报最新属性，避免平台侧状态滞后（如"关"看完仍显示"开"）
+        self._publish_properties(reason="command", force=True)
 
     def _publish_function_invoke_reply(self, message_id, function_id, output):
         tops = [f"/{self.product_id}/{self.device_id}/function/invoke/reply"]
