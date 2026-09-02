@@ -142,18 +142,18 @@ smart-relay/modbus01/data          # Modbus 采集上报
 ```bash
 .venv\Scripts\python.exe simulators\relay_jetlinks.py --format original
 ```
-- 终端发布训练图原始报文：`/product/{deviceId}/properties/post` + `{"method":"thing_service_property_post","params":{"ch1_status":...}}`；
-- 由 **EMQX 规则** `relay_original_to_jetlinks_g7`（`POST /api/v5/rules`）转换：订阅 `/product/${deviceId}/properties/post`，取出 `ch1_status~ch8_status`，republish 到 `/{productId}/{deviceId}/properties/report`。
+- 终端发布图格式原始报文：`/product/{deviceId}/properties/post` + `{"method":"thing.event.property-post","params":{"ch1_state":true,"ch1_voltage":220,...}}`；
+- 由 **EMQX 规则**转换：订阅 `/product/${deviceId}/properties/post`，取出 `params` 包成 `{"properties":{...}}`，republish 到 `/{productId}/{deviceId}/properties/report`。
 
 ### 情况B：终端直接输出 JetLinks 物模型格式
 ```bash
 .venv\Scripts\python.exe simulators\relay_jetlinks.py --format jetlinks
 ```
-- 终端发布 `/{productId}/{deviceId}/properties/report` + `{"properties":{"ch1_status":...}}`，JetLinks 直接解析。
+- 终端发布 `/{productId}/{deviceId}/properties/report` + `{"properties":{"ch1_state":bool,"ch1_voltage":220,...}}`，JetLinks 直接解析。
 
 **设备控制（功能下发）**：JetLinks 平台「功能调试」点 `set_channel` → EMQX `function/invoke` → 模拟器执行 → 回执 `function/invoke/reply` → 属性更新。
 
-**物模型**：导入 [`docs/jetlinks-thing-model.json`](docs/jetlinks-thing-model.json) 到产品（`ch1_status~ch8_status` + `online` 属性，`set_channel` 功能）。
+**物模型**：导入 [`docs/jetlinks-thing-model.json`](docs/jetlinks-thing-model.json) 到产品（`ch1_state~ch8_state` + `ch1_voltage~ch8_voltage` + `online` + `ts` 属性，`set_channel` 功能）。
 
 ---
 

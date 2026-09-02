@@ -177,22 +177,28 @@ smart-relay/relay01/online      # 上线/下线状态（发布）
 /{productId}/{deviceId}/function/invoke/reply  # 功能回执（上行，设备→平台）
 ```
 
-**属性上报 payload**：
+**属性上报 payload**（字段为 `chX_state` 布尔 + `chX_voltage` 电压模拟值 + `online` + `ts`）：
 ```json
-{"properties": {"ch1_status":"off","ch2_status":"on","ch3_status":"off","ch4_status":"off",
-                "ch5_status":"off","ch6_status":"off","ch7_status":"off","ch8_status":"off"}}
+{"properties": {"ch1_state":false,"ch1_voltage":220.0,"ch2_state":true,"ch2_voltage":219.7,
+                "ch3_state":false,"ch3_voltage":0,"ch4_state":false,"ch4_voltage":0,
+                "ch5_state":false,"ch5_voltage":0,"ch6_state":false,"ch6_voltage":0,
+                "ch7_state":false,"ch7_voltage":0,"ch8_state":false,"ch8_voltage":0,
+                "online":true,"ts":1724147200}}
 ```
 
 **平台下发功能调用**（`function/invoke`）：
 ```json
 {"messageType":"INVOKE_FUNCTION","messageId":"...","deviceId":"relay01",
- "functionId":"set_channel","inputs":[{"name":"channel","value":3},{"name":"status","value":"on"}]}
+ "functionId":"set_channel","inputs":[{"name":"channel","value":3},{"name":"state","value":true}]}
 ```
+> 原始终端格式的等价指令：`{"id":"cmd_001","method":"thing.service.property.set","params":{"ch1_state":false}}`。
 
 **功能回执**（`function/invoke/reply`）：
 ```json
-{"messageId":"...","success":true,"output":{"changed":true,"channels":[{"channel":3,"status":"on","voltage":219.6,"current":2.05}]}}
+{"messageId":"...","success":true,"output":{"changed":true,"channels":[{"channel":3,"status":"on","voltage":220.2,"current":2.05}]}}
 ```
+
+> 原始终端报文（情况A，交给 EMQX 规则转换）：`{"method":"thing.event.property-post","params":{"ch1_state":true,"ch1_voltage":220,"online":true,"ts":...}}`。
 
 > 对接细节、两种报文格式（情况A 用 EMQX 规则转换 / 情况B 直连）及物模型导入见
 > [`docs/jetlinks-emqx.md`](jetlinks-emqx.md) 与 [`docs/jetlinks-thing-model.json`](jetlinks-thing-model.json)。

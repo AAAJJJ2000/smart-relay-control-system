@@ -1,42 +1,35 @@
 {
   "properties": [
-    { "id": "ch1_status",  "name": "通道1状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
-    { "id": "ch2_status",  "name": "通道2状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
-    { "id": "ch3_status",  "name": "通道3状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
-    { "id": "ch4_status",  "name": "通道4状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
-    { "id": "ch5_status",  "name": "通道5状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
-    { "id": "ch6_status",  "name": "通道6状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
-    { "id": "ch7_status",  "name": "通道7状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
-    { "id": "ch8_status",  "name": "通道8状态", "valueType": { "type": "enum", "elements": [ { "value": "on",  "text": "开" }, { "value": "off", "text": "关" } ] } },
+    { "id": "ch1_state",   "name": "通道1状态", "valueType": { "type": "boolean" } },
+    { "id": "ch1_voltage", "name": "通道1电压", "valueType": { "type": "double" } },
+    { "id": "ch2_state",   "name": "通道2状态", "valueType": { "type": "boolean" } },
+    { "id": "ch2_voltage", "name": "通道2电压", "valueType": { "type": "double" } },
+    { "id": "ch3_state",   "name": "通道3状态", "valueType": { "type": "boolean" } },
+    { "id": "ch3_voltage", "name": "通道3电压", "valueType": { "type": "double" } },
+    { "id": "ch4_state",   "name": "通道4状态", "valueType": { "type": "boolean" } },
+    { "id": "ch4_voltage", "name": "通道4电压", "valueType": { "type": "double" } },
+    { "id": "ch5_state",   "name": "通道5状态", "valueType": { "type": "boolean" } },
+    { "id": "ch5_voltage", "name": "通道5电压", "valueType": { "type": "double" } },
+    { "id": "ch6_state",   "name": "通道6状态", "valueType": { "type": "boolean" } },
+    { "id": "ch6_voltage", "name": "通道6电压", "valueType": { "type": "double" } },
+    { "id": "ch7_state",   "name": "通道7状态", "valueType": { "type": "boolean" } },
+    { "id": "ch7_voltage", "name": "通道7电压", "valueType": { "type": "double" } },
+    { "id": "ch8_state",   "name": "通道8状态", "valueType": { "type": "boolean" } },
+    { "id": "ch8_voltage", "name": "通道8电压", "valueType": { "type": "double" } },
     { "id": "online",      "name": "在线状态", "valueType": { "type": "boolean" } },
     { "id": "ts",          "name": "时间戳",   "valueType": { "type": "long" } }
   ],
   "functions": [
     {
       "id": "set_channel",
-      "name": "设置单一通道",
+      "name": "设置通道",
       "inputs": [
-        { "id": "channel", "name": "通道号", "valueType": { "type": "int" } },
-        { "id": "status",  "name": "目标状态", "valueType": { "type": "enum", "elements": [ { "value": "on", "text": "开" }, { "value": "off", "text": "关" } ] } }
-      ],
-      "outputs": [],
-      "expands": {}
-    },
-    {
-      "id": "set_all",
-      "name": "整机开关",
-      "inputs": [
-        { "id": "status", "name": "目标状态", "valueType": { "type": "enum", "elements": [ { "value": "on", "text": "开" }, { "value": "off", "text": "关" } ] } }
+        { "id": "channel", "name": "通道", "valueType": { "type": "int" } },
+        { "id": "state",   "name": "状态", "valueType": { "type": "boolean" } }
       ],
       "outputs": [],
       "expands": {}
     }
   ],
-  "events": [
-    {
-      "id": "online_status",
-      "name": "在线状态变更",
-      "valueType": { "type": "object", "properties": [ { "id": "online", "name": "是否在线", "valueType": { "type": "boolean" } } ] }
-    }
-  ]
+  "events": []
 }

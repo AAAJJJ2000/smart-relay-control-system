@@ -107,12 +107,14 @@ class RelayChannels:
     def snapshot(self):
         return [dict(ch) for ch in self.channels]
 
-    def as_properties(self):
-        """转为 JetLinks 属性上报的 params（ch1_status..chN_status + ts）"""
+    def as_properties(self, include_ts=True):
+        """按图格式转为属性字段（chX_state:bool + chX_voltage:number + ts）"""
         props = {}
         for ch in self.channels:
-            props[f"ch{ch['channel']}_status"] = ch["status"]
-        props["ts"] = int(time.time())
+            props[f"ch{ch['channel']}_state"] = (ch["status"] == "on")
+            props[f"ch{ch['channel']}_voltage"] = ch["voltage"]
+        if include_ts:
+            props["ts"] = int(time.time())
         return props
 
 
@@ -233,6 +235,8 @@ class RelaySimulatorJetlinks:
         if message_type == "INVOKE_FUNCTION" or function_id:
             # JetLinks 官方功能调用格式（含仅有 functionId 而无 messageType 的变体）
             self._handle_jetlinks_invoke(payload)
+        elif method == "thing.service.property.set":
+            self._handle_raw_property_set(payload)
         elif method == "thing_service_service_invoke":
             self._handle_invoke(mid, payload.get("params", {}))
         elif method == "thing_service_property_write":
@@ -248,6 +252,20 @@ class RelaySimulatorJetlinks:
         function_id = params.get("functionId", "set_channel")
         changed = self._apply_action(params)
         self._publish_function_ack(mid, function_id, changed)
+
+    def _handle_raw_property_set(self, payload):
+        """处理图格式平台下发：{"method":"thing.service.property.set","params":{"ch1_state":false}}"""
+        params = payload.get("params", {}) or {}
+        changed = False
+        for key, val in params.items():
+            if key.startswith("ch") and key.endswith("_state") and isinstance(val, bool):
+                try:
+                    channel = int(key[2:-len("_state")])
+                    changed |= self.channels.set_one(channel, "on" if val else "off") is not None
+                except (ValueError, TypeError):
+                    pass
+        self.log.info("[执行] property.set %s -> 变化=%s", params, changed)
+        self._publish_properties(reason="property_set", force=True)
 
     def _handle_jetlinks_invoke(self, payload):
         """处理 JetLinks 官方 INVOKE_FUNCTION 格式：
@@ -302,8 +320,13 @@ class RelaySimulatorJetlinks:
           {"channel":3,"command":"toggle"} / {"channel":"all","status":"off"}
         """
         channel = params.get("channel", params.get("ch", "all"))
-        value = params.get("status") or params.get("command") or params.get("ch_command") or params.get("action")
-        value = str(value).lower() if value is not None else "toggle"
+        state = params.get("state")
+        if isinstance(state, bool):
+            # 图格式：布尔 state -> on/off
+            value = "on" if state else "off"
+        else:
+            value = params.get("status") or params.get("command") or params.get("ch_command") or params.get("action")
+            value = str(value).lower() if value is not None else "toggle"
         result = False
 
         if value not in ("on", "off", "toggle"):
@@ -335,18 +358,20 @@ class RelaySimulatorJetlinks:
 
     # ---- 上行上报 ----
     def _publish_properties(self, reason="periodic", force=True):
+        props = self.channels.as_properties()
+        props["online"] = True
         if self.publish_format == "original":
-            # 训练图原始报文： /product/{deviceId}/properties/post
+            # 图格式原始终端报文（交给 EMQX 规则转换）： /product/{deviceId}/properties/post
             topic = "/product/%s/properties/post" % self.device_id
             payload = {
-                "method": "thing_service_property_post",
+                "method": "thing.event.property-post",
                 "id": "prop_%d" % int(time.time() * 1000),
-                "params": self.channels.as_properties(),
+                "params": props,
             }
         else:
-            # JetLinks 物模型报文： /{productId}/{deviceId}/properties/report
+            # JetLinks 物模型报文（JetLinks 直接解析）： /{productId}/{deviceId}/properties/report
             topic = self.topics.properties_post()
-            payload = {"properties": self.channels.as_properties()}
+            payload = {"properties": props}
         info = self.client.publish(topic, json.dumps(payload, ensure_ascii=False), qos=self.qos)
         self._last_report = time.time()
         self.log.info("[上报] %s -> %s (mid=%s)", topic, json.dumps(payload, ensure_ascii=False), info.mid)

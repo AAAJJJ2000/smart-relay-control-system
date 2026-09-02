@@ -34,8 +34,8 @@
 
 1. **建产品**：产品标识（`product_id`）例如 `relay_product`，接入方式选 **MQTT**。
 2. **导入物模型**：把 `docs/jetlinks-thing-model.json` 导入到该产品：
-   - 属性：`ch1_status`~`ch8_status`（枚举 on/off）、`online`(bool)、`ts`(long)
-   - 功能：`set_channel`（channel + status）、`set_all`（status）
+   - 属性：`ch1_state`~`ch8_state`（布尔）、`ch1_voltage`~`ch8_voltage`（电压模拟值,double）、`online`(bool)、`ts`(long)
+   - 功能：`set_channel`（channel + state）
    - 事件：`online_status`
 3. **注册设备**：设备标识（`device_id`）例如 `relay01`，与模拟器 `jetlinks.device_id` 一致。
 4. **接 EMQX**：在 JetLinks「设备接入 / MQTT 服务」里配置它能连到你的 EMQX（订阅设备主题、向设备功能主题下发）。JetLinks 通过它订阅 `/product/{deviceId}/#` 并往下发主题发布命令。
@@ -75,10 +75,13 @@
 
 > **约定（已实测有效）**：JetLinks 官方 MQTT 协议的主题为 `/{productId}/{deviceId}/...`，属性上报用 `properties/report`，消息体是放在 `properties` 字段里。以下均以 `productId=relay_product_g7`、`deviceId=relay01` 为例。
 
-**上行：属性上报** → `/relay_product_g7/relay01/properties/report`
+**上行：属性上报** → `/relay_product_g7/relay01/properties/report`（字段为 `chX_state` 布尔 + `chX_voltage` 电压值 + `online` + `ts`）
 ```json
-{ "properties": { "ch1_status":"off","ch2_status":"on","ch3_status":"off","ch4_status":"off",
-                  "ch5_status":"off","ch6_status":"off","ch7_status":"off","ch8_status":"off" } }
+{ "properties": { "ch1_state":false,"ch1_voltage":220.0,"ch2_state":true,"ch2_voltage":219.7,
+                  "ch3_state":false,"ch3_voltage":0,"ch4_state":false,"ch4_voltage":0,
+                  "ch5_state":false,"ch5_voltage":0,"ch6_state":false,"ch6_voltage":0,
+                  "ch7_state":false,"ch7_voltage":0,"ch8_state":false,"ch8_voltage":0,
+                  "online":true,"ts":1724147200 } }
 ```
 
 **上行：在线事件** → `/relay_product_g7/relay01/event/online_status`
@@ -90,7 +93,7 @@
 `/relay_product_g7/relay01/function/invoke`
 ```json
 { "messageType":"INVOKE_FUNCTION","messageId":"209...","deviceId":"relay01",
-  "functionId":"set_channel","inputs":[{"name":"params","value":{"channel":3,"status":"on"}}] }
+  "functionId":"set_channel","inputs":[{"name":"params","value":{"channel":3,"state":true}}] }
 ```
 
 **上行：功能回执** → `/relay_product_g7/relay01/function/invoke/reply`
@@ -99,7 +102,7 @@
   "output":{"changed":true,"channels":[{"channel":3,"status":"on","voltage":217.8,"current":2.49}]} }
 ```
 
-> 下行已实测：JetLinks 调用 `set_channel` → EMQX `function/invoke` → 模拟器执行 → 回执 `function/invoke/reply` → `ch3_status` 属性更新。
+> 下行已实测：JetLinks 调用 `set_channel` → EMQX `function/invoke` → 模拟器执行 → 回执 `function/invoke/reply` → `ch3_state`/`ch3_voltage` 属性更新。
 
 ## 6. 两种报文格式满足甲方要求
 
@@ -107,18 +110,17 @@
   ```bash
   .venv\Scripts\python.exe simulators\relay_jetlinks.py --format jetlinks
   ```
-  终端发布 `/relay_product_g7/relay01/properties/report` + `{"properties":{"ch1_status":...}}`，JetLinks 直接解析。
+  终端发布 `/relay_product_g7/relay01/properties/report` + `{"properties":{"ch1_state":...,"ch1_voltage":...}}`，JetLinks 直接解析。
 
-- **情况A：终端输出原始报文 + EMQX 规则转换**
+- **情况A：终端输出原始报文（图格式）+ EMQX 规则转换**
   ```bash
   .venv\Scripts\python.exe simulators\relay_jetlinks.py --format original
   ```
-  终端发布训练图原始报文 `/product/relay01/properties/post` + `{"method":"thing_service_property_post","params":{"ch1_status":...}}`；
-  由 EMQX 规则 `relay_original_to_jetlinks_g7`（`POST /api/v5/rules`）转换：
-  - SQL：`SELECT payload.params.ch1_status AS ch1_status, ... FROM "/product/${deviceId}/properties/post"`
-  - 动作 republish：`topic=/relay_product_g7/${deviceId}/properties/report`，`payload={"properties":{"ch1_status":"${ch1_status}",...}}`
+  终端发布原始报文 `/product/relay01/properties/post` + `{"method":"thing.event.property-post","params":{"ch1_state":true,"ch1_voltage":220,...}}`；
+  由 EMQX 规则 `relay_original_to_jetlinks_g7`（`POST /api/v5/rules`）转换：取出 `params` 包成 `{"properties":{...}}` 转发到 `/relay_product_g7/${deviceId}/properties/report`。
 
-> 两种方式均已实测：JetLinks 里 `relay01` 在线且 8 个 `chX_status` 属性被解析。
+> 情况B 已实测：JetLinks 里 `relay01` 在线且 18 个属性（`chX_state` + `chX_voltage` + `online` + `ts`）被解析，含电压模拟值。
+> 情况A 的 EMQX 规则转换对布尔/数值字段的模板渲染需在平台侧核对（推荐直接用情况B）。
 
 ## 7. 本地自测（不依赖 EMQX/JetLinks）
 
