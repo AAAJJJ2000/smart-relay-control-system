@@ -56,10 +56,11 @@ python -m venv .venv
 
 ## 配置说明
 
-> 敏感/本机配置不入库。仓库提供 **`simulators/config.example.json`** 模板（密码为占位），
-> **复制为 `simulators/config.json` 并填入真实值**即可运行（`config.json` 已被 `.gitignore` 排除）。
+> **克隆即用**：仓库已包含可运行的 `simulators/config.json`（含共享教学 Broker 账号 `test/123456`），无需额外配置即可启动各模拟器。
+> 若你要连自己的 Broker，直接编辑 `simulators/config.json`，或复制 `simulators/config.example.json` 为 `config.json` 后填入实际账号。
 
 ```powershell
+# 如需用自己的账号（可选）：
 Copy-Item simulators\config.example.json simulators\config.json
 # 编辑 simulators\config.json，把 your_mqtt_user / your_mqtt_password 换成实际账号
 ```
@@ -219,7 +220,7 @@ smart-relay/modbus01/data          # Modbus 采集上报
 
 ## 说明
 
-- 本项目为教学/实践性质；MQTT Broker 为共享测试服务器，账号密码为教学用。
-- `config.json`（含真实密码）已被 `.gitignore` 排除，请勿提交；仓库仅提供 `config.example.json` 模板。
+- 本项目为教学/实践性质；MQTT Broker 为共享测试服务器，账号密码（`test/123456`）为教学用。
+- `simulators/config.json` 已随仓库提供（克隆即用）；更换 Broker 时直接编辑它，或改用 `config.example.json` 模板。
 - `sensor_state.json` 为便于演示的模拟数据源；Modbus 为真实设备/端点采集。
 - `relay_jetlinks.py` 对接 JetLinks 时涉及的产品（`relay_product_g7`）、设备（`relay01`）、EMQX 规则（`relay_original_to_jetlinks_g7`）需在对应平台按 [`docs/jetlinks-emqx.md`](docs/jetlinks-emqx.md) 配置。

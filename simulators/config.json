@@ -1,0 +1,65 @@
+{
+  "mqtt": {
+    "host": "172.16.4.211",
+    "port": 9783,
+    "username": "test",
+    "password": "123456",
+    "qos": 1
+  },
+  "sensor": {
+    "device_id": "sensor01",
+    "state_file": "sensor_state.json",
+    "poll_interval_sec": 2,
+    "report_period_sec": 10,
+    "topic": "smart-relay/sensor01/data"
+  },
+  "modbus": {
+    "host": "192.168.20.59",
+    "port": 5502,
+    "unit_id": 1,
+    "device_id": "modbus01",
+    "register_start": "0x0009",
+    "register_count": 1,
+    "poll_interval_sec": 5,
+    "read_topic": "smart-relay/modbus01/data"
+  },
+  "relay": {
+    "device_id": "relay01",
+    "channel_count": 8,
+    "initial_state": "off",
+    "cmd_topic": "smart-relay/relay01/cmd",
+    "status_topic": "smart-relay/relay01/status",
+    "online_topic": "smart-relay/relay01/online",
+    "report_period_sec": 5,
+    "simulate_voltage": true,
+    "log_file": "relay_simulator.log"
+  },
+  "emqx": {
+    "host": "172.16.4.211",
+    "port": 9783,
+    "username": "test",
+    "password": "123456",
+    "use_tls": false,
+    "ca_file": "",
+    "qos": 1,
+    "keepalive": 60
+  },
+  "jetlinks": {
+    "product_id": "relay_product_g7",
+    "device_id": "relay01",
+    "channel_count": 8,
+    "initial_state": "off",
+    "report_period_sec": 5,
+    "simulate_voltage": true,
+    "log_file": "relay_jetlinks.log",
+    "publish_format": "jetlinks",
+    "topic": {
+      "properties_post":  "/{productId}/{deviceId}/properties/report",
+      "event":            "/{productId}/{deviceId}/event/{eventId}",
+      "function_send":    "/{productId}/{deviceId}/function/{functionId}",
+      "online":           "/{productId}/{deviceId}/online",
+      "offline":          "/{productId}/{deviceId}/offline",
+      "command_subscribe": "/{productId}/{deviceId}/function/invoke"
+    }
+  }
+}
