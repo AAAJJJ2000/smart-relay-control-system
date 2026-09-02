@@ -1,19 +1,21 @@
 # 模拟器与采集程序（simulators）
 
-本目录实现「终端模拟软件」的两个功能，均使用 Python（项目 venv，内含 `paho-mqtt`、`pymodbus`），
+本目录实现「终端模拟软件」，均使用 Python（项目 venv，内含 `paho-mqtt 2.1.0`、`pymodbus 3.15.0`），
+经 MQTT 上报 / 控制，并可对接 JetLinks + EMQX。
 
 > **制作者：第七组（电信专业）**
-经 MQTT 上报到服务器 `172.16.4.211:9783`（`test`/`123456`）。
 
 ## 目录结构
 
 ```
 simulators/
-  config.json                # 共享配置文件（MQTT + 传感器 + Modbus + 继电器）
-  sensor_state.json          # 温湿度当前值（手动编辑触发上报）
-  temp_humidity_simulator.py # 功能1：温湿度传感器模拟器
-  modbus_gateway.py          # 功能2：Modbus TCP 采集上报
-  relay_simulator.py         # 功能3：8 路继电器模拟器
+  config.example.json          # 配置模板（密码占位；复制为 config.json 使用）
+  config.json                  # 本机实际配置（已被 .gitignore 排除，不入库）
+  sensor_state.json            # 温湿度当前值（手动编辑触发上报）
+  temp_humidity_simulator.py   # 功能1：温湿度传感器模拟器
+  modbus_gateway.py            # 功能2：Modbus TCP 采集上报
+  relay_simulator.py           # 功能3：8 路继电器模拟器（本地 Broker）
+  relay_jetlinks.py            # 功能4：8 路继电器模拟器（JetLinks/EMQX 协议版）
 ```
 
 ## 环境
@@ -25,6 +27,15 @@ python -m venv .venv
 ```
 
 > 本机已创建 `.venv` 并装好 `paho-mqtt 2.1.0`、`pymodbus 3.15.0`。
+
+## 配置
+
+> 仓库不含真实配置。**复制 `simulators/config.example.json` 为 `simulators/config.json` 并填入实际账号密码**即可运行；
+> `config.json` 已被 `.gitignore` 排除。
+
+```powershell
+Copy-Item simulators\config.example.json simulators\config.json
+```
 
 ---
 
@@ -86,11 +97,11 @@ python -m venv .venv
 
 ---
 
-## 功能 3：8 路继电器模拟器
+## 功能 3：8 路继电器模拟器（本地 Broker）
 
 **原理**：模拟一台带 8 路开关的继电器设备。它**订阅指令主题** `smart-relay/<device>/cmd` 接收控制命令，
 执行后**上报当前状态**到状态主题 `smart-relay/<device>/status`；同时按 `relay.report_period_sec` 周期上报。
-上线/下线时发布 `online` 状态到 `smart-relay/<device>/online`。断线自动退避重连，日志输出到控制台与 `relay_simulator.log`。
+上线/下线时发布 `online` 状态。断线自动退避重连，日志输出到控制台与 `relay_simulator.log`。
 
 **运行**（项目根目录）：
 ```bash
@@ -141,43 +152,80 @@ smart-relay/relay01/online      # 上线/下线状态（发布）
 
 ---
 
+## 功能 4：8 路继电器模拟器（JetLinks/EMQX 协议版）
+
+**原理**：连接 EMQX（`config.json` 的 `emqx` 段），按 **JetLinks 官方 MQTT 协议**上报属性 / 事件 / 在线状态；
+接收 **JetLinks 平台功能下发**（`set_channel`）并执行、回执。断线退避重连，日志输出到 `relay_jetlinks.log`。
+
+**运行**：
+```bash
+# 情况B：直接输出 JetLinks 物模型格式（推荐，配合平台控制）
+.venv\Scripts\python.exe simulators\relay_jetlinks.py --format jetlinks
+
+# 情况A：输出训练图原始报文（由 EMQX 规则转换为 JetLinks 格式）
+.venv\Scripts\python.exe simulators\relay_jetlinks.py --format original
+
+# 不连网，打印 8 路状态与将使用的主题
+.venv\Scripts\python.exe simulators\relay_jetlinks.py --dry-run
+```
+
+**主题**（JetLinks 官方协议，`/{productId}/{deviceId}/...`；见 config 的 `jetlinks.topic`）：
+```text
+/{productId}/{deviceId}/properties/report      # 属性上报（上行）
+/{productId}/{deviceId}/event/{eventId}        # 事件上报（上行）
+/{productId}/{deviceId}/function/invoke        # 功能调用（下行，平台→设备）
+/{productId}/{deviceId}/function/invoke/reply  # 功能回执（上行，设备→平台）
+```
+
+**属性上报 payload**：
+```json
+{"properties": {"ch1_status":"off","ch2_status":"on","ch3_status":"off","ch4_status":"off",
+                "ch5_status":"off","ch6_status":"off","ch7_status":"off","ch8_status":"off"}}
+```
+
+**平台下发功能调用**（`function/invoke`）：
+```json
+{"messageType":"INVOKE_FUNCTION","messageId":"...","deviceId":"relay01",
+ "functionId":"set_channel","inputs":[{"name":"channel","value":3},{"name":"status","value":"on"}]}
+```
+
+**功能回执**（`function/invoke/reply`）：
+```json
+{"messageId":"...","success":true,"output":{"changed":true,"channels":[{"channel":3,"status":"on","voltage":219.6,"current":2.05}]}}
+```
+
+> 对接细节、两种报文格式（情况A 用 EMQX 规则转换 / 情况B 直连）及物模型导入见
+> [`docs/jetlinks-emqx.md`](jetlinks-emqx.md) 与 [`docs/jetlinks-thing-model.json`](jetlinks-thing-model.json)。
+
+---
+
 ## 启动与关闭（自行管理进程）
 
-> `sensor` / `modbus` 都需要**保持进程运行**才会持续上报；进程一旦停止，上报即停止。
+> 各模拟器都需要**保持进程运行**才会持续上报 / 响应；进程一旦停止即停止。
 
 ### 前台运行 + Ctrl+C 关闭（最常用）
-打开 PowerShell/命令行窗口，进入项目根目录：
+进入项目根目录：
 ```powershell
 cd E:\NEW\smart-relay-control-system
-.venv\Scripts\python.exe simulators\temp_humidity_simulator.py   # 启动 sensor（持续，每10s上报）
+.venv\Scripts\python.exe simulators\temp_humidity_simulator.py   # 启动 sensor
 ```
 - **关闭**：在窗口按 **`Ctrl+C`**。
 
-Modbus 同理（另开一个窗口）：
+其它模块同理（另开窗口）：
 ```powershell
-.venv\Scripts\python.exe simulators\modbus_gateway.py           # 持续采集，每5s
-.venv\Scripts\python.exe simulators\modbus_gateway.py --once    # 只采集一次
+.venv\Scripts\python.exe simulators\modbus_gateway.py           # Modbus 持续采集
+.venv\Scripts\python.exe simulators\relay_simulator.py           # 8路继电器(本地)
+.venv\Scripts\python.exe simulators\relay_jetlinks.py --format jetlinks   # 8路继电器(JetLinks)
 ```
-
-### 同时跑 sensor + modbus
-开**两个**终端窗口，各跑一个；各自用 `Ctrl+C` 关闭。
 
 ### 后台运行 + 按 PID 关闭
-启动（后台，不占窗口）：
 ```powershell
 Start-Process -FilePath "E:\NEW\smart-relay-control-system\.venv\Scripts\python.exe" `
-  -ArgumentList "simulators\temp_humidity_simulator.py" `
+  -ArgumentList "simulators\relay_jetlinks.py","--format","jetlinks" `
   -WorkingDirectory "E:\NEW\smart-relay-control-system"
 ```
-关闭：
 ```powershell
 Get-Process python* | Select Id, StartTime
-Stop-Process -Id <PID> -Force
-```
-
-### 查看 / 清理残留进程
-```powershell
-Get-Process python* | Select Id, StartTime, Path
 Stop-Process -Id <PID> -Force
 ```
 
@@ -188,10 +236,16 @@ Stop-Process -Id <PID> -Force
 | 段 | 字段 | 说明 |
 |----|------|------|
 | `mqtt` | `host`/`port`/`username`/`password`/`qos` | Broker 连接与发布 QoS |
-| `sensor` | `device_id`/`state_file`/`poll_interval_sec`/`report_period_sec`/`topic` | 模拟器设备标识、状态文件、检测间隔、周期上报间隔、上报主题 |
+| `sensor` | `device_id`/`state_file`/`poll_interval_sec`/`report_period_sec`/`topic` | 设备标识、状态文件、检测间隔、周期上报间隔、上报主题 |
 | `modbus` | `host`/`port`/`unit_id`/`device_id`/`register_start`/`register_count`/`poll_interval_sec`/`read_topic` | Modbus 从站、从站地址、寄存器段、采集间隔、上报主题 |
 | `relay` | `device_id`/`channel_count`/`initial_state`/`cmd_topic`/`status_topic`/`online_topic`/`report_period_sec`/`simulate_voltage`/`log_file` | 继电器设备标识、路数、初始状态、指令/状态/在线主题、周期上报间隔、是否模拟电压电流、日志文件 |
+| `emqx` | `host`/`port`/`username`/`password`/`use_tls`/`ca_file`/`qos`/`keepalive` | JetLinks 版连接的 EMQX Broker 与 TLS/认证 |
+| `jetlinks` | `product_id`/`device_id`/`channel_count`/`initial_state`/`report_period_sec`/`simulate_voltage`/`log_file`/`publish_format`/`topic.*` | JetLinks 产品/设备标识、上报周期、输出格式、主题模板 |
+
+> `publish_format` 取值：`jetlinks`（直接输出物模型格式）/ `original`（训练图原始报文，由 EMQX 规则转换）。
 
 ## 已验证（本次实测）
 - Modbus：`192.168.20.59:5502` 连通，`0x0009` 读取 → MQTT 上报成功。
 - 传感器：首次上报 + 修改 `sensor_state.json` 后自动上报，且按 `report_period_sec` 周期上报，均到达 Broker。
+- 8 路继电器（本地）：连 Broker、订阅指令、执行 `set/toggle` 并上报状态成功。
+- 8 路继电器（JetLinks）：`relay01` 在线、8 路属性解析；JetLinks 功能按钮下发 `set_channel` → 执行 → 回执 → 属性更新。
